@@ -85,3 +85,4 @@ desktop.ini
 *.db
 *.pid
 *.seed
+.feeder-fingerprint.json

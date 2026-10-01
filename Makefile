@@ -1,8 +1,16 @@
-.PHONY: install backend frontend
+.PHONY: install setup smoke test backend frontend
 
 install:
-	cd backend && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-	cd frontend && npm install
+	scripts/setup.sh --deps-only
+
+setup:
+	scripts/setup.sh
+
+smoke:
+	python3 scripts/smoke_feeder.py
+
+test:
+	cd backend && .venv/bin/python -m unittest discover -s tests -v
 
 backend:
 	cd backend && ./run.sh

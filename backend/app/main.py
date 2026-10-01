@@ -5,14 +5,30 @@
 """
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import AsyncIterator
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
+from app.importer import import_base_table
 from app.routers import ROUTERS
 from app.store import store
 
-app = FastAPI(title="港口集装箱作业管理平台", version="1.0.0")
+BASE_TABLE_PATH = Path(__file__).resolve().parent.parent / "data" / "feeder_base.csv"
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    # 启动先铺驳船底表：底表缺失或校验不过，进程直接起不来，不留半套环境
+    inserted, skipped = import_base_table(store, BASE_TABLE_PATH)
+    print(f"[startup] 驳船底表就绪：新增 {inserted} 条，跳过 {skipped} 条（重复导入只认第一次）")
+    yield
+
+
+app = FastAPI(title="港口集装箱作业管理平台", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
