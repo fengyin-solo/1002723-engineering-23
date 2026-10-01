@@ -23,6 +23,13 @@
         <span>{{ field }}</span>
         <input v-model="filters[field]" :placeholder="`按${field}检索`" />
       </label>
+      <label class="filter-item">
+        <span>驳船状态</span>
+        <select v-model="statusFilter">
+          <option value="">全部状态</option>
+          <option v-for="s in statuses" :key="s" :value="s">{{ s }}</option>
+        </select>
+      </label>
       <button class="btn" type="submit">查询</button>
       <button class="btn ghost" type="button" @click="resetFilters">重置条件</button>
     </form>
@@ -63,7 +70,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 import { request } from '@/api/client'
 
@@ -73,16 +80,31 @@ const ENDPOINT = '/api/feeder'
 const columns = ["驳船编号", "驳船名称", "运营公司", "载箱量", "到港时间", "离港时间", "靠泊码头", "驳船状态"]
 const actions = ["安排靠泊", "开始作业", "确认离港"]
 const statuses = ["到港待靠", "靠泊中", "作业中", "已离港"]
-const stats = [{"label": "待靠驳船", "value": 0}, {"label": "作业驳船", "value": 0}, {"label": "已离港驳船", "value": 0}]
 
 const rows = ref<Row[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
+const statusFilter = ref('')
 const filterFields = columns.slice(0, 3)
+
+// 统计卡直接从列表数据算：接口没数据或载箱量读不到，页面一眼就能看出来
+const stats = computed(() => {
+  const waiting = rows.value.filter((row) => row['驳船状态'] === '到港待靠').length
+  const inPort = rows.value.filter((row) => ['靠泊中', '作业中'].includes(String(row['驳船状态']))).length
+  const departed = rows.value.filter((row) => row['驳船状态'] === '已离港').length
+  const teuTotal = rows.value.reduce((sum, row) => sum + (Number(row['载箱量']) || 0), 0)
+  return [
+    { label: '待靠驳船', value: waiting },
+    { label: '在港驳船', value: inPort },
+    { label: '已离港驳船', value: departed },
+    { label: '载箱量合计(TEU)', value: teuTotal },
+  ]
+})
 
 function resetFilters() {
   filters.value = {}
+  statusFilter.value = ''
   void reload()
 }
 
@@ -112,7 +134,11 @@ async function runAction(action: string, row: Row) {
 
 async function reload() {
   errorMessage.value = ''
-  const query = new URLSearchParams(filters.value as Record<string, string>).toString()
+  const params = new URLSearchParams(filters.value as Record<string, string>)
+  if (statusFilter.value) {
+    params.set('status', statusFilter.value)
+  }
+  const query = params.toString()
   try {
     const response = await request(`${ENDPOINT}?${query}`)
     if (!response.ok) {

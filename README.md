@@ -5,6 +5,20 @@
 这是一个前后端分离的管理平台：前端 Vue 3 + Vite + TypeScript，后端 FastAPI（Python）。
 两边各自独立启动，前端 dev server 已关掉自动打开页面，启动后按终端打印的地址手工打开。
 
+## 快速开始（推荐）
+
+支线驳船模块有一份可复用搭建清单：一次备齐三方组件、驳船/靠泊码头底表与冒烟，
+任何一步没备齐就停在那一步并打印缺失项。本地 / 预发 / 生产同一份脚本。
+
+```bash
+make setup     # 一次性搭建：锁版本依赖 → 建 SQLite 底表 → 幂等导入驳船底表 → 冒烟 → 前端构建
+make dev       # 本地开发：清单校验后拉起前后端，自动跑冒烟（含 vite 代理链路）
+make verify ENV_A=http://pre ENV_B=http://prod   # 上线前双环境载箱量一致性比对
+```
+
+详见 [`docs/feeder-bootstrap.md`](docs/feeder-bootstrap.md)，排障记录归档在
+[`docs/troubleshooting/troubleshooting.md`](docs/troubleshooting/troubleshooting.md)。
+
 ## 目录结构
 
 ```text
@@ -17,9 +31,12 @@
 ├── backend/                  FastAPI（Python） 后端
 │   ├── app/routers/          每个业务模块一组接口
 │   ├── app/services/         业务规则与状态流转
-│   └── app/store.py          内存数据仓库与示例数据
-├── .gitignore
-└── docker-compose.yml
+│   ├── app/store.py          其余模块的内存示例数据
+│   ├── app/db.py             支线驳船 SQLite 底表访问层
+│   ├── scripts/              建表 / 幂等导入 / 冒烟 / 双环境比对
+│   └── data/fixtures/        驳船与靠泊码头底表 CSV
+├── scripts/                  bootstrap.sh / dev.sh / verify.sh 搭建清单
+└── docs/                     搭建清单说明与排障归档
 ```
 
 ## 启动
